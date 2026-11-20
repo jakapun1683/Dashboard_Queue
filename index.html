@@ -1440,72 +1440,60 @@
         }
 
         // ดึงข้อมูลชากิโลจากลิงก์ CSV (รองรับทั้ง gviz แบบเรียลไทม์ และ Publish to web CSV)
-        async function fetchTeaFromCsvUrl(csvUrl) {
+        async function fetchTeaFromCsv(csvUrl) {
             const response = await fetchWithTimeout(appendCacheBuster(csvUrl), { redirect: 'follow' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const csvText = (await response.text()).trim();
-            if (!csvText || /^<!doctype\s+html|^<html/i.test(csvText)) {
-                throw new Error('ไฟล์ที่ดึงมาไม่ใช่ข้อมูล CSV (กรุณาเช็คสิทธิ์การแชร์ชีต)');
+            if (!response.ok) throw new Error(`CSV HTTP ${response.status}`);
+            const csvText = await response.text();
+            const trimmed = csvText.trim();
+            if (!trimmed) throw new Error('ไฟล์ CSV ชากิโลว่างเปล่า');
+            if (/^<!doctype\s+html|^<html/i.test(trimmed)) {
+                throw new Error('ลิงก์คืนหน้า HTML (กรุณาเช็คสิทธิ์การแชร์ Google Sheets)');
             }
-            return parseCsv(csvText);
+            return parseCsv(trimmed);
         }
 
-        // อัพเดทป้ายปุ่มโหมดเร็วพิเศษตามสถานะการเชื่อมต่อปัจจุบัน
-        function updateSpeedButtonUi() {
-            const btn = document.getElementById('speed-settings-btn');
-            const label = document.getElementById('speed-settings-label');
-            if (!btn || !label) return;
-            const endpoint = resolveTeaRealtimeEndpoint(getSavedTeaRealtimeUrl());
-            if (endpoint) {
-                btn.className = 'flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-sm active:scale-95 cursor-pointer';
-                label.textContent = `โหมดเรียลไทม์: เปิด`;
-            } else {
-                btn.className = 'flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-sm active:scale-95 cursor-pointer';
-                label.textContent = 'เร่งความเร็วชากิโล ⚡';
-            }
-        }
-
-        // ดึงข้อมูลหน้าชากิโล (1 kg) — พยายามใช้ลิงก์เรียลไทม์ก่อน ถ้าไม่มีหรือใช้ไม่ได้จึงสลับไป CSV เดิม
+        // ดึงข้อมูลชากิโล (1 kg) พร้อมรองรับโหมดเรียลไทม์และสลับกลับลิงก์ CSV สำรองอัตโนมัติ
         async function fetchTeaData() {
             if (isLoadingTea) return;
             isLoadingTea = true;
             updateFooterStatus();
 
-            const errorBox = document.getElementById('tea-error-box');
-            const errorDetail = document.getElementById('tea-error-detail');
             const loadingBox = document.getElementById('tea-loading-box');
             const contentBox = document.getElementById('tea-content');
+            const errorBox = document.getElementById('tea-error-box');
+            const errorDetail = document.getElementById('tea-error-detail');
+
+            const realtimeEndpoint = resolveTeaRealtimeEndpoint(getSavedTeaRealtimeUrl());
+            let rows = null;
+            let sourceLabel = 'CSV (Publish)';
+            let fallbackNotice = '';
 
             try {
-                const realtimeEndpoint = resolveTeaRealtimeEndpoint(getSavedTeaRealtimeUrl());
-                let rows = null;
-                let sourceLabel = 'Publish CSV (Google แคช 3–5 นาที)';
-                let isRealtimeSource = false;
-
+                // 1. หากผู้ใช้ตั้งค่าลิงก์เรียลไทม์ไว้ ให้ลองดึงก่อน
                 if (realtimeEndpoint) {
                     try {
                         rows = realtimeEndpoint.mode === 'apps-script'
                             ? await fetchTeaFromAppsScript(realtimeEndpoint.url)
-                            : await fetchTeaFromCsvUrl(realtimeEndpoint.url);
+                            : await fetchTeaFromCsv(realtimeEndpoint.url);
                         sourceLabel = realtimeEndpoint.label;
-                        isRealtimeSource = true;
                     } catch (rtErr) {
-                        console.warn('ลิงก์เรียลไทม์ชากิโลดึงไม่ได้ กำลังสลับไป CSV สำรอง:', rtErr.message);
+                        console.warn('ลิงก์เรียลไทม์ชากิโลใช้ไม่ได้ สลับไปใช้ CSV เดิม:', rtErr);
+                        fallbackNotice = ' (สลับใช้ CSV สำรอง)';
                     }
                 }
 
+                // 2. ใช้ลิงก์ Publish to web CSV เดิมเป็นค่าหลักหรือสำรอง
                 if (!rows) {
-                    rows = await fetchTeaFromCsvUrl(TEA_CSV_URL);
+                    rows = await fetchTeaFromCsv(TEA_CSV_URL);
                 }
 
                 const records = parseTeaRows(rows);
-
                 teaState.records = records;
                 teaState.totalCsvRows = Math.max(0, rows.length - 1);
                 teaState.isDemo = false;
 
-                if (errorBox) errorBox.classList.add('hidden');
                 if (loadingBox) loadingBox.classList.add('hidden');
+                if (errorBox) errorBox.classList.add('hidden');
                 if (contentBox) contentBox.classList.remove('hidden');
 
                 renderTeaDashboard();
@@ -1515,26 +1503,89 @@
 
                 teaOk = true;
                 const teaSec = Math.round(TEA_REFRESH_MS / 1000);
-                teaStatusSummary = isRealtimeSource
-                    ? `ออนไลน์ • ${escapeHtml(sourceLabel)} (${formatNum(records.length)} รายการ) <span class="text-xs lg:text-sm text-slate-400 ml-2 font-normal">รีเฟรชทุก ${teaSec} วิ</span>`
-                    : `ออนไลน์ • ${escapeHtml(sourceLabel)} <span class="text-xs lg:text-sm text-amber-600 ml-2 font-medium">กด "เร่งความเร็วชากิโล ⚡" เพื่อดึงสดทันที</span>`;
-            } catch (err) {
-                console.error('Tea CSV Error:', err);
+                teaStatusSummary = `ออนไลน์ ชากิโล 1 kg • ${escapeHtml(sourceLabel)}${escapeHtml(fallbackNotice)} <span class="text-xs lg:text-sm text-slate-400 ml-2 font-normal">อัพเดททุก ${teaSec} วิ (${formatNum(records.length)} รายการ)</span>`;
+            } catch (error) {
+                console.error('Tea Fetch Error:', error);
                 teaOk = false;
-                teaStatusSummary = `เกิดข้อผิดพลาด (ชากิโล 1 kg): ${escapeHtml(err.message || err)}`;
-                if (errorDetail) errorDetail.textContent = err.message || String(err);
+                const msg = error.name === 'AbortError'
+                    ? 'เชื่อมต่อช้าเกินกำหนด (Timeout 8 วิ)'
+                    : (error.message || String(error));
+                teaStatusSummary = `เกิดข้อผิดพลาด (ชากิโล 1 kg): ${escapeHtml(msg)}`;
+
+                if (loadingBox && teaState.records.length === 0) loadingBox.classList.add('hidden');
                 if (errorBox) errorBox.classList.remove('hidden');
-                if (teaState.records.length === 0 && loadingBox) {
-                    loadingBox.classList.add('hidden');
-                }
+                if (errorDetail) errorDetail.textContent = msg;
             } finally {
                 isLoadingTea = false;
-                updateSpeedButtonUi();
                 updateFooterStatus();
             }
         }
 
-        // เปิด/ปิด และจัดการ Modal ตั้งค่าลิงก์เรียลไทม์ของชากิโล
+        // โหลดข้อมูลตัวอย่างกรณีทดสอบแบบออฟไลน์หรือ Google Sheets เข้าถึงไม่ได้
+        function loadDemoTeaData() {
+            const now = new Date();
+            const demoNames = ['พิจิตรา มัมวาฬ', 'สุวนันท์ ศิริมาตย์', 'สุวรรณา นุ่มเจริญ', 'จันทร์จิรา บิลยะลา', 'อื่นๆ'];
+            const demoRecords = [];
+
+            for (let offset = 0; offset < 32; offset++) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const day = d.getDate();
+                const dateInfo = parseDateInfo(`${day}/${m}/${y}`);
+                const weekInfo = normalizeWeekInfo('', dateInfo);
+                const dayName = THAI_DAYS_FULL[d.getDay()];
+
+                demoNames.forEach((name, idx) => {
+                    const qty = Math.max(1, ((offset * 3 + idx * 7) % 14) + (idx === 0 ? 6 : 2));
+                    demoRecords.push({
+                        station: name,
+                        dateKey: dateInfo.dateKey,
+                        dateLabel: `${dateInfo.dateLabel} (${dayName})`,
+                        dateShort: dateInfo.dateLabel,
+                        monthKey: dateInfo.monthKey,
+                        monthLabel: dateInfo.monthLabel,
+                        cycleKey: dateInfo.cycleKey,
+                        cycleLabel: dateInfo.cycleLabel,
+                        weekKey: weekInfo.weekKey,
+                        weekLabel: weekInfo.weekLabel,
+                        timestamp: dateInfo.timestamp,
+                        qty
+                    });
+                });
+            }
+
+            teaState.records = demoRecords;
+            teaState.isDemo = true;
+            const loadingBox = document.getElementById('tea-loading-box');
+            const contentBox = document.getElementById('tea-content');
+            const errorBox = document.getElementById('tea-error-box');
+            if (loadingBox) loadingBox.classList.add('hidden');
+            if (errorBox) errorBox.classList.add('hidden');
+            if (contentBox) contentBox.classList.remove('hidden');
+
+            renderTeaDashboard();
+            teaOk = true;
+            teaStatusSummary = 'โหมดข้อมูลตัวอย่าง ชากิโล (1 kg)';
+            updateFooterStatus();
+        }
+
+        // อัพเดทปุ่มโหมดเร็วพิเศษตามสถานะว่าตั้งค่าลิงก์เรียลไทม์ไว้แล้วหรือยัง
+        function updateSpeedButtonUi() {
+            const btn = document.getElementById('speed-settings-btn');
+            const label = document.getElementById('speed-settings-label');
+            if (!btn || !label) return;
+            const endpoint = resolveTeaRealtimeEndpoint(getSavedTeaRealtimeUrl());
+            if (endpoint) {
+                btn.className = 'flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-sm active:scale-95 cursor-pointer';
+                label.textContent = `โหมดเร็วพิเศษ: เปิด`;
+            } else {
+                btn.className = 'flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-sm active:scale-95 cursor-pointer';
+                label.textContent = 'โหมดเร็วพิเศษ';
+            }
+        }
+
+        // เปิดหน้าต่างตั้งค่าลิงก์เรียลไทม์สำหรับชากิโล
         function openSpeedModal() {
             const modal = document.getElementById('speed-modal');
             const input = document.getElementById('tea-realtime-input');
@@ -1548,136 +1599,100 @@
             safeIcons();
         }
 
+        // ปิดหน้าต่างตั้งค่าลิงก์เรียลไทม์
         function closeSpeedModal() {
             const modal = document.getElementById('speed-modal');
             if (modal) modal.classList.add('hidden');
         }
 
-        function showSpeedModalMsg(text, isError = false) {
-            const msg = document.getElementById('speed-modal-msg');
-            if (!msg) return;
-            msg.textContent = text;
-            msg.className = `text-xs font-medium ${isError ? 'text-red-600' : 'text-emerald-700'}`;
-            msg.classList.remove('hidden');
-        }
-
+        // บันทึกลิงก์เรียลไทม์ลง localStorage และดึงข้อมูลทันที
         function saveTeaRealtimeUrl() {
             const input = document.getElementById('tea-realtime-input');
-            const raw = input ? input.value.trim() : '';
-            if (!raw) {
-                clearTeaRealtimeUrl();
+            const msg = document.getElementById('speed-modal-msg');
+            const val = input ? input.value.trim() : '';
+
+            if (val && !/^https?:\/\//i.test(val)) {
+                if (msg) {
+                    msg.textContent = 'กรุณาวางลิงก์ที่ขึ้นต้นด้วย https://';
+                    msg.className = 'text-xs font-medium text-red-600';
+                    msg.classList.remove('hidden');
+                }
                 return;
             }
-            if (/\/spreadsheets\/d\/e\/2PACX-/i.test(raw)) {
-                showSpeedModalMsg('ลิงก์นี้เป็นลิงก์ Publish to web (2PACX) ซึ่งติดแคช 3–5 นาที กรุณาใช้ลิงก์จากช่อง Address Bar ของ Google Sheets หรือลิงก์ Apps Script (/exec)', true);
-                return;
-            }
+
             try {
-                localStorage.setItem(TEA_REALTIME_STORAGE_KEY, raw);
-            } catch (e) { /* ข้ามหากบันทึกไม่ได้ */ }
+                if (val) localStorage.setItem(TEA_REALTIME_STORAGE_KEY, val);
+                else localStorage.removeItem(TEA_REALTIME_STORAGE_KEY);
+            } catch (e) { /* กรณี iFrame ไม่ให้ใช้ localStorage */ }
+
             updateSpeedButtonUi();
             closeSpeedModal();
             fetchTeaData();
         }
 
+        // ล้างลิงก์เรียลไทม์ กลับไปใช้ลิงก์ CSV เดิม
         function clearTeaRealtimeUrl() {
+            const input = document.getElementById('tea-realtime-input');
+            if (input) input.value = '';
             try {
                 localStorage.removeItem(TEA_REALTIME_STORAGE_KEY);
             } catch (e) { /* ข้ามได้ */ }
-            const input = document.getElementById('tea-realtime-input');
-            if (input) input.value = '';
             updateSpeedButtonUi();
             closeSpeedModal();
             fetchTeaData();
         }
 
+        // คัดลอกโค้ด Apps Script ด้วย execCommand('copy') เพื่อรองรับการรันใน iFrame
         function copyTeaAppsScriptCode() {
-            const codeEl = document.getElementById('tea-apps-script-snippet');
-            if (!codeEl) return;
+            const pre = document.getElementById('tea-apps-script-snippet');
+            const msg = document.getElementById('speed-modal-msg');
+            if (!pre) return;
+
             const textarea = document.createElement('textarea');
-            textarea.value = codeEl.textContent;
+            textarea.value = pre.textContent;
             textarea.style.position = 'fixed';
             textarea.style.opacity = '0';
             document.body.appendChild(textarea);
+            textarea.focus();
             textarea.select();
+
+            let copied = false;
             try {
-                document.execCommand('copy');
-                showSpeedModalMsg('คัดลอกโค้ด Apps Script เรียบร้อยแล้ว! นำไปวางใน ส่วนขยาย > Apps Script แล้วกด Deploy > Web App (Anyone)');
+                copied = document.execCommand('copy');
             } catch (e) {
-                showSpeedModalMsg('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณาลากคลุมโค้ดแล้วกด Ctrl+C', true);
+                copied = false;
             }
             document.body.removeChild(textarea);
-        }
 
-        // โหลดข้อมูลตัวอย่างกรณีต้องการทดสอบเมื่อออฟไลน์
-        function loadDemoTeaData() {
-            const demoRows = [
-                ['Operations/Transfer', 'Operations/Created', 'Date', 'Week', 'วัน', 'เวลา', 'เกณฑ์เวลา', 'Operations/Product (Name)', 'Operations/Lot/Serial Number', 'Operations/Quantity', 'ชื่อพนักงาน'],
-                ['PackingStation03', '', '20/11/2026', '47', 'วันศุกร์', '09:10:00', '09:00', 'Matchazuki M3 1 Kg', '', '14', 'จันทร์จิรา บิลยะลา'],
-                ['PackingStation01', '', '20/11/2026', '47', 'วันศุกร์', '10:05:00', '10:00', 'Matchazuki M4 1 Kg', '', '9', 'สุภาวดี ใจดี'],
-                ['PackingStation02', '', '20/11/2026', '47', 'วันศุกร์', '11:20:00', '11:00', 'Matchazuki M3 1 Kg', '', '6', 'ธนพล สุขสันต์'],
-                ['PackingStation04', '', '20/11/2026', '47', 'วันศุกร์', '13:15:00', '13:00', 'Matchazuki M3 1 Kg', '', '4', '#N/A'],
-                ['PackingStation01', '', '19/11/2026', '47', 'วันพฤหัสบดี', '09:30:00', '09:00', 'Matchazuki M3 1 Kg', '', '22', 'สุภาวดี ใจดี'],
-                ['PackingStation03', '', '19/11/2026', '47', 'วันพฤหัสบดี', '11:10:00', '11:00', 'Matchazuki M4 1 Kg', '', '18', 'จันทร์จิรา บิลยะลา'],
-                ['PackingStation02', '', '18/11/2026', '47', 'วันพุธ', '14:00:00', '14:00', 'Matchazuki M3 1 Kg', '', '15', ''],
-                ['PackingStation03', '', '10/11/2026', '46', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '35', 'จันทร์จิรา บิลยะลา'],
-                ['PackingStation02', '', '09/11/2026', '46', 'วันจันทร์', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '28', '#N/A'],
-                ['PackingStation01', '', '05/11/2026', '45', 'วันพฤหัสบดี', '10:00:00', '10:00', 'Matchazuki M4 1 Kg', '', '40', 'สุภาวดี ใจดี'],
-                ['PackingStation04', '', '03/11/2026', '45', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '19', 'ธนพล สุขสันต์'],
-                ['PackingStation03', '', '28/10/2026', '44', 'วันพุธ', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '27', 'จันทร์จิรา บิลยะลา'],
-                ['PackingStation01', '', '26/10/2026', '44', 'วันจันทร์', '10:00:00', '10:00', 'Matchazuki M4 1 Kg', '', '21', 'สุภาวดี ใจดี']
-            ];
-            teaState.records = parseTeaRows(demoRows);
-            teaState.isDemo = true;
-            const errorBox = document.getElementById('tea-error-box');
-            const loadingBox = document.getElementById('tea-loading-box');
-            const contentBox = document.getElementById('tea-content');
-            if (errorBox) errorBox.classList.add('hidden');
-            if (loadingBox) loadingBox.classList.add('hidden');
-            if (contentBox) contentBox.classList.remove('hidden');
-            renderTeaDashboard();
-            teaOk = true;
-            teaStatusSummary = 'โหมดข้อมูลตัวอย่าง (ชากิโล 1 kg)';
-            updateFooterStatus();
-        }
-
-        // รวมยอดจำนวนถุงแยกตาม Station แล้วเรียงจากมากไปน้อย
-        function aggregateByStation(list) {
-            const map = new Map();
-            let total = 0;
-            for (const item of list) {
-                const prev = map.get(item.station) || 0;
-                map.set(item.station, prev + item.qty);
-                total += item.qty;
+            if (msg) {
+                msg.textContent = copied
+                    ? 'คัดลอกโค้ด Apps Script เรียบร้อยแล้ว นำไปวางที่ ส่วนขยาย > Apps Script ใน Google Sheet ได้เลยครับ'
+                    : 'ไม่สามารถคัดลอกอัตโนมัติได้ กรุณาลากคลุมโค้ดแล้วกด Ctrl+C ครับ';
+                msg.className = copied ? 'text-xs font-medium text-emerald-700' : 'text-xs font-medium text-amber-700';
+                msg.classList.remove('hidden');
             }
-            const ranked = Array.from(map.entries())
-                .map(([station, qty]) => ({
-                    station,
-                    qty,
-                    pct: total > 0 ? Math.round((qty / total) * 100) : 0
-                }))
-                .sort((a, b) => b.qty - a.qty || a.station.localeCompare(b.station));
-            return { ranked, total };
         }
 
-        // สร้างรายการตัวเลือก (วัน / สัปดาห์ / เดือน / รอบตัด 26–25) เรียงจากล่าสุดไปเก่าสุด
+        // จัดกลุ่มและเรียงช่วงเวลา (วัน / สัปดาห์ / เดือน / รอบตัด 26-25) จากใหม่สุดไปเก่าสุด
         function getSortedPeriods(records, keyField, labelField) {
             const map = new Map();
-            for (const r of records) {
-                const key = r[keyField];
-                const cur = map.get(key);
+            for (const rec of records) {
+                const key = rec[keyField];
+                if (!key) continue;
+                let cur = map.get(key);
                 if (!cur) {
-                    map.set(key, {
+                    cur = {
                         key,
-                        label: r[labelField],
-                        latestTs: r.timestamp || 0,
-                        total: r.qty
-                    });
-                } else {
-                    cur.total += r.qty;
-                    if ((r.timestamp || 0) > cur.latestTs) {
-                        cur.latestTs = r.timestamp;
-                    }
+                        label: rec[labelField] || key,
+                        latestTs: rec.timestamp || 0,
+                        total: 0,
+                        isCurrent: false
+                    };
+                    map.set(key, cur);
+                }
+                cur.total += rec.qty;
+                if ((rec.timestamp || 0) > cur.latestTs) {
+                    cur.latestTs = rec.timestamp;
                 }
             }
             return Array.from(map.values()).sort((a, b) => {
@@ -1686,7 +1701,34 @@
             });
         }
 
-        // เมื่อผู้ใช้เปลี่ยนวัน / สัปดาห์ / เดือน / รอบตัด 26-25 บน dropdown ของแต่ละกราฟ
+        // สรุปยอดรวมและจัดอันดับตามชื่อพนักงาน
+        function aggregateByStation(records) {
+            const map = new Map();
+            let total = 0;
+
+            for (const rec of records) {
+                const name = rec.station || 'อื่นๆ';
+                map.set(name, (map.get(name) || 0) + rec.qty);
+                total += rec.qty;
+            }
+
+            const ranked = Array.from(map.entries())
+                .map(([station, qty]) => ({
+                    station,
+                    qty,
+                    pct: total > 0 ? Math.round((qty / total) * 100) : 0
+                }))
+                .sort((a, b) => {
+                    if (b.qty !== a.qty) return b.qty - a.qty;
+                    if (a.station === 'อื่นๆ') return 1;
+                    if (b.station === 'อื่นๆ') return -1;
+                    return a.station.localeCompare(b.station, 'th');
+                });
+
+            return { ranked, total };
+        }
+
+        // เมื่อผู้ใช้เลือกช่วงเวลาจาก Dropdown ของการ์ดใดการ์ดหนึ่ง
         function onTeaPeriodChange(periodType, value) {
             const current = getCurrentPeriodInfo();
             if (periodType === 'day') {
@@ -1719,29 +1761,65 @@
             renderTeaDashboard();
         }
 
-        // สีประจำแต่ละ Station เพื่อให้มองกราฟสัดส่วนกับกราฟแท่งเชื่อมโยงกันได้ทันทีบนจอ TV
+        // สีประจำตัวของพนักงานแต่ละคน (12 โทนสีคมชัดสำหรับจอ TV — เชื่อมโยงการ์ดแชมป์ กราฟสัดส่วน และรายการอันดับให้เป็นสีเดียวกัน)
         const STATION_PALETTE = [
-            { bg: 'bg-emerald-500', soft: 'bg-emerald-50', text: 'text-emerald-700' },
-            { bg: 'bg-sky-500',     soft: 'bg-sky-50',     text: 'text-sky-700' },
-            { bg: 'bg-violet-500',  soft: 'bg-violet-50',  text: 'text-violet-700' },
-            { bg: 'bg-amber-500',   soft: 'bg-amber-50',   text: 'text-amber-700' },
-            { bg: 'bg-rose-500',    soft: 'bg-rose-50',    text: 'text-rose-700' },
-            { bg: 'bg-teal-500',    soft: 'bg-teal-50',    text: 'text-teal-700' },
-            { bg: 'bg-indigo-500',  soft: 'bg-indigo-50',  text: 'text-indigo-700' },
-            { bg: 'bg-orange-500',  soft: 'bg-orange-50',  text: 'text-orange-700' }
+            { bg: 'bg-emerald-500', heroBg: 'bg-gradient-to-r from-emerald-600 to-teal-500',    heroSub: 'text-emerald-100', soft: 'bg-emerald-50/90', border: 'border-emerald-300', text: 'text-emerald-700' },
+            { bg: 'bg-sky-500',     heroBg: 'bg-gradient-to-r from-sky-600 to-blue-500',        heroSub: 'text-sky-100',     soft: 'bg-sky-50/90',     border: 'border-sky-300',     text: 'text-sky-700' },
+            { bg: 'bg-violet-500',  heroBg: 'bg-gradient-to-r from-violet-600 to-purple-500',   heroSub: 'text-violet-100',  soft: 'bg-violet-50/90',  border: 'border-violet-300',  text: 'text-violet-700' },
+            { bg: 'bg-rose-500',    heroBg: 'bg-gradient-to-r from-rose-600 to-pink-500',       heroSub: 'text-rose-100',    soft: 'bg-rose-50/90',    border: 'border-rose-300',    text: 'text-rose-700' },
+            { bg: 'bg-amber-500',   heroBg: 'bg-gradient-to-r from-amber-500 to-orange-500',    heroSub: 'text-amber-100',   soft: 'bg-amber-50/90',   border: 'border-amber-300',   text: 'text-amber-700' },
+            { bg: 'bg-cyan-500',    heroBg: 'bg-gradient-to-r from-cyan-600 to-sky-500',        heroSub: 'text-cyan-100',    soft: 'bg-cyan-50/90',    border: 'border-cyan-300',    text: 'text-cyan-700' },
+            { bg: 'bg-indigo-500',  heroBg: 'bg-gradient-to-r from-indigo-600 to-blue-600',     heroSub: 'text-indigo-100',  soft: 'bg-indigo-50/90',  border: 'border-indigo-300',  text: 'text-indigo-700' },
+            { bg: 'bg-fuchsia-500', heroBg: 'bg-gradient-to-r from-fuchsia-600 to-purple-500',  heroSub: 'text-fuchsia-100', soft: 'bg-fuchsia-50/90', border: 'border-fuchsia-300', text: 'text-fuchsia-700' },
+            { bg: 'bg-orange-500',  heroBg: 'bg-gradient-to-r from-orange-600 to-amber-500',    heroSub: 'text-orange-100',  soft: 'bg-orange-50/90',  border: 'border-orange-300',  text: 'text-orange-700' },
+            { bg: 'bg-teal-500',    heroBg: 'bg-gradient-to-r from-teal-600 to-cyan-500',       heroSub: 'text-teal-100',    soft: 'bg-teal-50/90',    border: 'border-teal-300',    text: 'text-teal-700' },
+            { bg: 'bg-pink-500',    heroBg: 'bg-gradient-to-r from-pink-600 to-rose-500',       heroSub: 'text-pink-100',    soft: 'bg-pink-50/90',    border: 'border-pink-300',    text: 'text-pink-700' },
+            { bg: 'bg-lime-600',    heroBg: 'bg-gradient-to-r from-lime-600 to-emerald-500',    heroSub: 'text-lime-100',    soft: 'bg-lime-50/90',    border: 'border-lime-300',    text: 'text-lime-700' }
         ];
+
+        const OTHER_PERSON_COLOR = {
+            bg: 'bg-slate-400',
+            heroBg: 'bg-gradient-to-r from-slate-600 to-slate-500',
+            heroSub: 'text-slate-200',
+            soft: 'bg-slate-100',
+            border: 'border-slate-300',
+            text: 'text-slate-700'
+        };
+
+        const EMPTY_LEADER_COLOR = {
+            bg: 'bg-slate-400',
+            heroBg: 'bg-gradient-to-r from-slate-400 to-slate-500',
+            heroSub: 'text-slate-100',
+            soft: 'bg-slate-50',
+            border: 'border-slate-200',
+            text: 'text-slate-600'
+        };
+
+        // แผนที่จับคู่สีประจำตัวไม่ให้ซ้ำกันในทีม (สร้างจากรายชื่อทั้งหมดที่มีในชีต)
+        let personColorMap = new Map();
+
+        function buildPersonColorMap(records) {
+            const uniqueNames = Array.from(new Set(
+                records
+                    .map(r => String(r.station || '').trim())
+                    .filter(name => name && name !== 'อื่นๆ')
+            )).sort((a, b) => a.localeCompare(b, 'th'));
+
+            const nextMap = new Map();
+            uniqueNames.forEach((name, idx) => {
+                nextMap.set(name, STATION_PALETTE[idx % STATION_PALETTE.length]);
+            });
+            personColorMap = nextMap;
+        }
 
         function getStationColor(stationName) {
             const str = String(stationName || '').trim();
             // ให้กลุ่ม "อื่นๆ" ใช้สีเทากลาง เพื่อแยกออกจากพนักงานที่มีชื่อชัดเจน
-            if (str === 'อื่นๆ') {
-                return { bg: 'bg-slate-400', soft: 'bg-slate-100', text: 'text-slate-600' };
+            if (!str || str === 'อื่นๆ') {
+                return OTHER_PERSON_COLOR;
             }
-            // ถ้ามีตัวเลขท้ายชื่อ เช่น Station01 -> ดึงเลขมาใช้เป็น index สีคงที่
-            const numMatch = str.match(/(\d+)\s*$/);
-            if (numMatch) {
-                const n = Math.max(0, parseInt(numMatch[1], 10) - 1);
-                return STATION_PALETTE[n % STATION_PALETTE.length];
+            if (personColorMap.has(str)) {
+                return personColorMap.get(str);
             }
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -1756,7 +1834,7 @@
             return normalizePackerName(packerName);
         }
 
-        // สร้าง HTML การ์ดสำหรับ TV 32 นิ้ว (รวม การ์ดแชมป์อันดับ 1 + กราฟสัดส่วน 100% + อันดับผู้แพ็คครบใน 1 หน้าจอ)
+        // สร้าง HTML การ์ดสำหรับ TV 32 นิ้ว (รวม การ์ดแชมป์อันดับ 1 สีประจำตัว + กราฟสัดส่วน 100% + อันดับผู้แพ็คครบใน 1 หน้าจอ)
         function buildRankCardHtml({
             periodType,
             title,
@@ -1771,6 +1849,7 @@
             const { ranked, total } = summary;
             const leader = ranked[0] || null;
             const leaderDisplayName = leader ? formatStationName(leader.station) : '';
+            const leaderColor = leader ? getStationColor(leader.station) : EMPTY_LEADER_COLOR;
             const stationCount = ranked.length;
             const isUltraCompact = stationCount >= 9;
 
@@ -1817,14 +1896,14 @@
                     if (isUltraCompact) {
                         // โหมดกระชับพิเศษ (9 รายชื่อขึ้นไป): แสดงครบทุกแถวในหน้าเดียวบน TV
                         return `
-                        <div class="flex-1 min-h-0 flex items-center justify-between gap-1.5 px-2 py-0.5 rounded-lg ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
+                        <div class="flex-1 min-h-0 flex items-center justify-between gap-1.5 px-2 py-0.5 rounded-lg ${isTop ? stColor.soft + ' border ' + stColor.border : 'bg-slate-50/80 border border-slate-100'}">
                             <div class="flex items-center gap-1.5 min-w-0">
                                 <span class="tv-num w-5 h-5 rounded text-[11px] flex items-center justify-center shrink-0 ${rankBadge}">${idx + 1}</span>
                                 <span class="w-2 h-2 rounded-full shrink-0 ${stColor.bg}"></span>
                                 <span class="font-medium text-xs xl:text-sm text-slate-800 truncate leading-snug" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
                             </div>
                             <div class="flex items-baseline gap-1 shrink-0">
-                                <span class="tv-num text-base xl:text-lg leading-none ${isTop ? theme.textAccent : 'text-slate-900'}">${formatNum(item.qty)}</span>
+                                <span class="tv-num text-base xl:text-lg leading-none ${isTop ? stColor.text : 'text-slate-900'}">${formatNum(item.qty)}</span>
                                 <span class="tv-num-light text-[11px] xl:text-xs text-slate-600 w-7 text-right">${item.pct}%</span>
                             </div>
                         </div>`;
@@ -1832,7 +1911,7 @@
 
                     // โหมดมาตรฐาน TV (อ่านชัดจากระยะ 5-8 เมตร: ชื่อไทยไม่โดนตัดสระบน-ล่าง ตัวเลขโปร่งชัดเจน รองรับ 4 คอลัมน์)
                     return `
-                        <div class="flex-1 min-h-0 max-h-[54px] flex items-center justify-between gap-1.5 px-2 py-1 rounded-xl transition-colors ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
+                        <div class="flex-1 min-h-0 max-h-[54px] flex items-center justify-between gap-1.5 px-2 py-1 rounded-xl transition-colors ${isTop ? stColor.soft + ' border ' + stColor.border : 'bg-slate-50/80 border border-slate-100'}">
                             <div class="flex items-center gap-1.5 min-w-0">
                                 <span class="tv-num w-6 h-6 rounded-lg text-xs flex items-center justify-center shrink-0 ${rankBadge}">
                                     ${idx + 1}
@@ -1843,7 +1922,7 @@
                                 </span>
                             </div>
                             <div class="flex items-baseline gap-1.5 shrink-0">
-                                <span class="tv-num leading-none ${isTop ? theme.textAccent + ' text-xl xl:text-3xl' : 'text-slate-900 text-lg xl:text-2xl'}">
+                                <span class="tv-num leading-none ${isTop ? stColor.text + ' text-xl xl:text-3xl' : 'text-slate-900 text-lg xl:text-2xl'}">
                                     ${formatNum(item.qty)}
                                 </span>
                                 <span class="tv-num-light text-xs xl:text-sm text-slate-600 w-8 xl:w-10 text-right">${item.pct}%</span>
@@ -1881,12 +1960,12 @@
                     </p>
                 </div>
 
-                <!-- การ์ดตัวเลขไฮไลต์อันดับ 1 + ยอดรวมทั้งหมดและกราฟสัดส่วน 100% -->
+                <!-- การ์ดตัวเลขไฮไลต์อันดับ 1 (เปลี่ยนสีตามสีประจำตัวของคนนั้น) + ยอดรวมทั้งหมดและกราฟสัดส่วน 100% -->
                 <div class="px-2.5 xl:px-3 pt-2.5 pb-2 border-b border-slate-100 shrink-0 space-y-2">
-                    <!-- กล่องสีแสดงเฉพาะแชมป์อันดับ 1 เพื่อไม่ให้สับสนกับยอดรวมทั้งหมด -->
-                    <div class="${theme.heroBg} rounded-xl px-2.5 xl:px-3 py-2 shadow-sm flex items-center justify-between gap-2">
+                    <!-- กล่องสีแสดงเฉพาะแชมป์อันดับ 1 โดยใช้สีประจำตัวของคนๆ นั้น -->
+                    <div class="${leaderColor.heroBg} rounded-xl px-2.5 xl:px-3 py-2 shadow-sm flex items-center justify-between gap-2 transition-colors duration-300">
                         <div class="flex-1 min-w-0">
-                            <div class="text-xs xl:text-sm font-medium ${theme.heroSub} leading-none">🏆 แพ็คเยอะสุด</div>
+                            <div class="text-xs xl:text-sm font-medium ${leaderColor.heroSub} leading-none">🏆 แพ็คเยอะสุด</div>
                             <div class="font-semibold text-base sm:text-lg xl:text-2xl text-white tracking-normal truncate leading-snug py-0.5 mt-0.5" title="${leader ? escapeHtml(leaderDisplayName) : '-'}">
                                 ${leader ? escapeHtml(leaderDisplayName) : 'ยังไม่มีข้อมูล'}
                             </div>
@@ -1929,6 +2008,7 @@
             if (!grid) return;
 
             const records = teaState.records;
+            buildPersonColorMap(records); // กำหนดสีประจำตัวให้แต่ละชื่อแบบไม่ซ้ำกัน
             const current = getCurrentPeriodInfo();
 
             const days = getSortedPeriods(records, 'dateKey', 'dateLabel');
@@ -2008,12 +2088,7 @@
                         iconBg: 'bg-emerald-100',
                         iconText: 'text-emerald-700',
                         titleText: 'text-emerald-900',
-                        ring: 'focus:ring-emerald-400',
-                        heroBg: 'bg-gradient-to-r from-emerald-600 to-teal-500',
-                        heroSub: 'text-emerald-100',
-                        textAccent: 'text-emerald-700',
-                        topRowBg: 'bg-emerald-50/80',
-                        topRowBorder: 'border-emerald-200'
+                        ring: 'focus:ring-emerald-400'
                     },
                     options: days,
                     selectedKey: teaState.selectedDate,
@@ -2031,12 +2106,7 @@
                         iconBg: 'bg-sky-100',
                         iconText: 'text-sky-700',
                         titleText: 'text-sky-900',
-                        ring: 'focus:ring-sky-400',
-                        heroBg: 'bg-gradient-to-r from-sky-600 to-blue-500',
-                        heroSub: 'text-sky-100',
-                        textAccent: 'text-sky-700',
-                        topRowBg: 'bg-sky-50/80',
-                        topRowBorder: 'border-sky-200'
+                        ring: 'focus:ring-sky-400'
                     },
                     options: weeks,
                     selectedKey: teaState.selectedWeek,
@@ -2054,12 +2124,7 @@
                         iconBg: 'bg-violet-100',
                         iconText: 'text-violet-700',
                         titleText: 'text-violet-900',
-                        ring: 'focus:ring-violet-400',
-                        heroBg: 'bg-gradient-to-r from-violet-600 to-purple-500',
-                        heroSub: 'text-violet-100',
-                        textAccent: 'text-violet-700',
-                        topRowBg: 'bg-violet-50/80',
-                        topRowBorder: 'border-violet-200'
+                        ring: 'focus:ring-violet-400'
                     },
                     options: months,
                     selectedKey: teaState.selectedMonth,
@@ -2077,12 +2142,7 @@
                         iconBg: 'bg-amber-100',
                         iconText: 'text-amber-700',
                         titleText: 'text-amber-900',
-                        ring: 'focus:ring-amber-400',
-                        heroBg: 'bg-gradient-to-r from-amber-500 to-orange-500',
-                        heroSub: 'text-amber-100',
-                        textAccent: 'text-amber-700',
-                        topRowBg: 'bg-amber-50/80',
-                        topRowBorder: 'border-amber-200'
+                        ring: 'focus:ring-amber-400'
                     },
                     options: cycles,
                     selectedKey: teaState.selectedCycle,
