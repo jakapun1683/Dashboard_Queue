@@ -1277,41 +1277,55 @@
             return fallbackIdx;
         }
 
-        // แปลงแถว CSV ให้เหลือเฉพาะรายการชากิโล (มีคำว่า 1 kg)
+        // ตรวจสอบและจัดรูปแบบชื่อพนักงานจากคอลัมน์ K (ค่าว่างหรือเออเร่อจากสูตร เช่น #N/A -> "อื่นๆ")
+        function normalizePackerName(rawName) {
+            const cleaned = String(rawName ?? '').replace(/\u00A0/g, ' ').trim();
+            if (!cleaned) return 'อื่นๆ';
+            // ตรวจจับค่า Error ของ Google Sheets (#N/A, #REF!, #VALUE!, #NAME?, #DIV/0!, #ERROR!, #NUM!, #NULL! ฯลฯ)
+            if (cleaned.startsWith('#')) return 'อื่นๆ';
+            if (/^(?:n\/a|na|error|err|null|undefined|nan|false|0|-+|–+|—+)$/i.test(cleaned)) {
+                return 'อื่นๆ';
+            }
+            return cleaned;
+        }
+
+        // แปลงแถว CSV ให้เหลือเฉพาะรายการชากิโล (มีคำว่า 1 kg) โดยจัดกลุ่มตามชื่อพนักงานในคอลัมน์ K
         function parseTeaRows(rows) {
             if (!Array.isArray(rows) || rows.length < 2) return [];
             const headers = rows[0];
 
-            const colStation = findColIndex(headers, [
-                h => h.includes('operations/transfer'),
-                h => h.includes('transfer'),
-                h => h.includes('station')
-            ], 0);
+            // ค้นหาคอลัมน์ "ชื่อพนักงาน" (คอลัมน์ K = index 10)
+            const colPacker = findColIndex(headers, [
+                h => h.includes('ชื่อพนักงาน'),
+                h => h.includes('พนักงาน'),
+                h => h.includes('ชื่อผู้แพ็ค') || h.includes('ผู้แพ็ค'),
+                h => h === 'ชื่อ' || h.includes('employee') || h.includes('staff')
+            ], 10);
             const colDate = findColIndex(headers, [
                 h => h === 'date',
                 h => h.includes('date'),
                 h => h.includes('วันที่')
-            ], 1);
+            ], 2);
             const colWeek = findColIndex(headers, [
                 h => h === 'week',
                 h => h.includes('week'),
                 h => h.includes('สัปดาห์')
-            ], 2);
+            ], 3);
             const colDayName = findColIndex(headers, [
                 h => h === 'วัน',
                 h => h.includes('day')
-            ], 3);
+            ], 4);
             const colProduct = findColIndex(headers, [
                 h => h.includes('operations/product'),
                 h => h.includes('product'),
                 h => h.includes('สินค้า')
-            ], 5);
+            ], 7);
             const colQty = findColIndex(headers, [
                 h => h.includes('operations/quantity'),
                 h => h.includes('quantity'),
                 h => h.includes('qty'),
                 h => h.includes('จำนวน')
-            ], 6);
+            ], 9);
 
             const records = [];
             for (let i = 1; i < rows.length; i++) {
@@ -1324,7 +1338,8 @@
                     continue;
                 }
 
-                const station = String(row[colStation] ?? '').trim() || 'ไม่ระบุ Station';
+                // ใช้ชื่อพนักงานจากคอลัมน์ K (ถ้าว่างหรือขึ้น #N/A / Error จะเป็น "อื่นๆ")
+                const packerName = normalizePackerName(row[colPacker]);
                 const rawDate = String(row[colDate] ?? '').trim();
                 const rawWeek = String(row[colWeek] ?? '').trim();
                 const dayName = String(row[colDayName] ?? '').trim();
@@ -1336,7 +1351,7 @@
                 const weekInfo = normalizeWeekInfo(rawWeek, dateInfo);
 
                 records.push({
-                    station,
+                    station: packerName,
                     dateKey: dateInfo.dateKey,
                     dateLabel: dayName ? `${dateInfo.dateLabel} (${dayName})` : dateInfo.dateLabel,
                     dateShort: dateInfo.dateLabel,
@@ -1547,18 +1562,18 @@
         // โหลดข้อมูลตัวอย่างกรณีต้องการทดสอบเมื่อออฟไลน์
         function loadDemoTeaData() {
             const demoRows = [
-                ['Operations/Transfer', 'Date', 'Week', 'วัน', 'เกณฑ์เวลา', 'Operations/Product (Name)', 'Operations/Quantity'],
-                ['PackingStation03', '20/11/2026', 'W47', 'วันศุกร์', '09:00-10:00', 'Matcha Medium 1 kg', '14'],
-                ['PackingStation01', '20/11/2026', 'W47', 'วันศุกร์', '10:00-11:00', 'Hojicha Powder 1 kg', '9'],
-                ['PackingStation02', '20/11/2026', 'W47', 'วันศุกร์', '11:00-12:00', 'Matcha Classic 1 kg', '6'],
-                ['PackingStation04', '20/11/2026', 'W47', 'วันศุกร์', '13:00-14:00', 'Matcha Excellent 1 kg', '4'],
-                ['PackingStation01', '19/11/2026', 'W47', 'วันพฤหัสบดี', '09:00-10:00', 'Matcha Medium 1 kg', '22'],
-                ['PackingStation03', '19/11/2026', 'W47', 'วันพฤหัสบดี', '11:00-12:00', 'Matcha Classic 1 kg', '18'],
-                ['PackingStation02', '18/11/2026', 'W47', 'วันพุธ', '14:00-15:00', 'Matcha Medium 1 kg', '15'],
-                ['PackingStation03', '10/11/2026', 'W46', 'วันอังคาร', '10:00-11:00', 'Matcha Medium 1 kg', '35'],
-                ['PackingStation02', '09/11/2026', 'W46', 'วันจันทร์', '10:00-11:00', 'Matcha Medium 1 kg', '28'],
-                ['PackingStation01', '05/11/2026', 'W45', 'วันพฤหัสบดี', '10:00-11:00', 'Hojicha 1 kg', '40'],
-                ['PackingStation04', '03/11/2026', 'W45', 'วันอังคาร', '10:00-11:00', 'Matcha Classic 1 kg', '19']
+                ['Operations/Transfer', 'Operations/Created', 'Date', 'Week', 'วัน', 'เวลา', 'เกณฑ์เวลา', 'Operations/Product (Name)', 'Operations/Lot/Serial Number', 'Operations/Quantity', 'ชื่อพนักงาน'],
+                ['PackingStation03', '', '20/11/2026', '47', 'วันศุกร์', '09:10:00', '09:00', 'Matchazuki M3 1 Kg', '', '14', 'จันทร์จิรา บิลยะลา'],
+                ['PackingStation01', '', '20/11/2026', '47', 'วันศุกร์', '10:05:00', '10:00', 'Matchazuki M4 1 Kg', '', '9', 'สุภาวดี ใจดี'],
+                ['PackingStation02', '', '20/11/2026', '47', 'วันศุกร์', '11:20:00', '11:00', 'Matchazuki M3 1 Kg', '', '6', 'ธนพล สุขสันต์'],
+                ['PackingStation04', '', '20/11/2026', '47', 'วันศุกร์', '13:15:00', '13:00', 'Matchazuki M3 1 Kg', '', '4', '#N/A'],
+                ['PackingStation01', '', '19/11/2026', '47', 'วันพฤหัสบดี', '09:30:00', '09:00', 'Matchazuki M3 1 Kg', '', '22', 'สุภาวดี ใจดี'],
+                ['PackingStation03', '', '19/11/2026', '47', 'วันพฤหัสบดี', '11:10:00', '11:00', 'Matchazuki M4 1 Kg', '', '18', 'จันทร์จิรา บิลยะลา'],
+                ['PackingStation02', '', '18/11/2026', '47', 'วันพุธ', '14:00:00', '14:00', 'Matchazuki M3 1 Kg', '', '15', ''],
+                ['PackingStation03', '', '10/11/2026', '46', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '35', 'จันทร์จิรา บิลยะลา'],
+                ['PackingStation02', '', '09/11/2026', '46', 'วันจันทร์', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '28', '#N/A'],
+                ['PackingStation01', '', '05/11/2026', '45', 'วันพฤหัสบดี', '10:00:00', '10:00', 'Matchazuki M4 1 Kg', '', '40', 'สุภาวดี ใจดี'],
+                ['PackingStation04', '', '03/11/2026', '45', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '19', 'ธนพล สุขสันต์']
             ];
             teaState.records = parseTeaRows(demoRows);
             teaState.isDemo = true;
@@ -1654,8 +1669,12 @@
         ];
 
         function getStationColor(stationName) {
-            const str = String(stationName || '');
-            // ถ้ามีตัวเลขท้ายชื่อ Station เช่น PackingStation01 -> ดึงเลขมาใช้เป็น index สีคงที่
+            const str = String(stationName || '').trim();
+            // ให้กลุ่ม "อื่นๆ" ใช้สีเทากลาง เพื่อแยกออกจากพนักงานที่มีชื่อชัดเจน
+            if (str === 'อื่นๆ') {
+                return { bg: 'bg-slate-400', soft: 'bg-slate-100', text: 'text-slate-600' };
+            }
+            // ถ้ามีตัวเลขท้ายชื่อ เช่น Station01 -> ดึงเลขมาใช้เป็น index สีคงที่
             const numMatch = str.match(/(\d+)\s*$/);
             if (numMatch) {
                 const n = Math.max(0, parseInt(numMatch[1], 10) - 1);
@@ -1669,14 +1688,12 @@
             return STATION_PALETTE[Math.abs(hash) % STATION_PALETTE.length];
         }
 
-        // ตัดคำว่า "Packing" ข้างหน้าออก ให้เหลือตั้งแต่คำว่า Station ขึ้นไป (เช่น PackingStation03 -> Station03)
-        function formatStationName(stationName) {
-            const raw = String(stationName || '').trim();
-            const cleaned = raw.replace(/^packing[\s\-_]*/i, '').trim();
-            return cleaned || raw;
+        // จัดรูปแบบชื่อที่แสดงบนการ์ด (ชื่อพนักงานหรือ "อื่นๆ")
+        function formatStationName(packerName) {
+            return normalizePackerName(packerName);
         }
 
-        // สร้าง HTML การ์ดสำหรับ TV 32 นิ้ว (รวม การ์ดแชมป์อันดับ 1 + กราฟสัดส่วน 100% + กราฟแท่งแบบ Auto-Fit ครบใน 1 หน้าจอ)
+        // สร้าง HTML การ์ดสำหรับ TV 32 นิ้ว (รวม การ์ดแชมป์อันดับ 1 + กราฟสัดส่วน 100% + อันดับผู้แพ็คครบใน 1 หน้าจอ)
         function buildRankCardHtml({
             periodType,
             title,
@@ -1700,7 +1717,7 @@
                 </option>
             `).join('');
 
-            // กราฟสัดส่วน 100% แบบ Stacked Bar (เห็นภาพรวมสัดส่วนทุก Station ในแถบเดียว)
+            // กราฟสัดส่วน 100% แบบ Stacked Bar (เห็นภาพรวมสัดส่วนผู้แพ็คทุกคนในแถบเดียว)
             const stackedSegmentsHtml = ranked.length === 0
                 ? ''
                 : ranked.map(item => {
@@ -1716,7 +1733,7 @@
                         </div>`;
                 }).join('');
 
-            // รายการอันดับทุก Station (แบบการ์ดตัวเลขสะอาดตา ไม่มีหลอดพลัง อ่านชัดระยะ 5-8 เมตร)
+            // รายการอันดับผู้แพ็คทุกคน (แบบการ์ดตัวเลขสะอาดตา รองรับชื่อภาษาไทยเต็มรูปแบบ อ่านชัดระยะ 5-8 เมตร)
             const barsHtml = ranked.length === 0
                 ? `<div class="flex-1 flex flex-col items-center justify-center text-slate-400 py-6">
                         <i data-lucide="inbox" class="w-10 h-10 mb-1.5 opacity-50"></i>
@@ -1735,13 +1752,13 @@
                                 : 'bg-slate-200/80 text-slate-700';
 
                     if (isUltraCompact) {
-                        // โหมดกะทัดรัดพิเศษ 1 บรรทัด (กรณีมี 9 Station ขึ้นไป ให้เห็นครบในหน้าเดียว)
+                        // โหมดกะทัดรัดพิเศษ 1 บรรทัด (กรณีมี 9 รายชื่อขึ้นไป ให้เห็นครบในหน้าเดียว)
                         return `
-                            <div class="flex-1 min-h-[26px] max-h-[42px] flex items-center justify-between gap-2 px-2.5 rounded-lg ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
+                            <div class="flex-1 min-h-[28px] max-h-[42px] flex items-center justify-between gap-2 px-2.5 rounded-lg ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="tv-num w-6 h-6 rounded-md text-xs flex items-center justify-center shrink-0 ${rankBadge}">${idx + 1}</span>
                                     <span class="w-2.5 h-2.5 rounded-full shrink-0 ${stColor.bg}"></span>
-                                    <span class="font-medium tracking-wide truncate text-sm lg:text-base ${isTop ? 'text-slate-900 font-semibold' : 'text-slate-800'}" title="${escapeHtml(item.station)}">
+                                    <span class="font-medium tracking-normal truncate leading-snug py-0.5 text-sm lg:text-base ${isTop ? 'text-slate-900 font-semibold' : 'text-slate-800'}" title="${escapeHtml(displayName)}">
                                         ${escapeHtml(displayName)}
                                     </span>
                                 </div>
@@ -1752,7 +1769,7 @@
                             </div>`;
                     }
 
-                    // โหมดมาตรฐาน TV (อ่านชัดจากระยะ 5-8 เมตร: ตัวเลขโปร่ง ขนาดใหญ่ ช่องไฟชัดเจน ไม่มีหลอดพลัง)
+                    // โหมดมาตรฐาน TV (อ่านชัดจากระยะ 5-8 เมตร: ชื่อไทยไม่โดนตัดสระบน-ล่าง ตัวเลขโปร่งชัดเจน)
                     return `
                         <div class="flex-1 min-h-0 max-h-[54px] flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-xl transition-colors ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
                             <div class="flex items-center gap-2 min-w-0">
@@ -1760,7 +1777,7 @@
                                     ${idx + 1}
                                 </span>
                                 <span class="w-2.5 h-2.5 rounded-full shrink-0 ${stColor.bg}"></span>
-                                <span class="tv-num tracking-normal truncate ${isTop ? 'text-slate-900 text-lg xl:text-2xl' : 'text-slate-800 text-base xl:text-xl'}" title="${escapeHtml(item.station)}">
+                                <span class="font-medium tracking-normal truncate leading-snug py-0.5 ${isTop ? 'text-slate-900 font-semibold text-base xl:text-xl' : 'text-slate-800 text-sm xl:text-lg'}" title="${escapeHtml(displayName)}">
                                     ${escapeHtml(displayName)}
                                 </span>
                             </div>
@@ -1809,7 +1826,7 @@
                     <div class="${theme.heroBg} rounded-xl px-3 py-2.5 shadow-sm flex items-center justify-between gap-2">
                         <div class="flex-1 min-w-0">
                             <div class="text-xs xl:text-sm font-medium ${theme.heroSub} leading-none">🏆 แพ็คเยอะสุด</div>
-                            <div class="tv-num text-xl sm:text-2xl xl:text-3xl text-white tracking-normal truncate leading-tight mt-1" title="${leader ? escapeHtml(leader.station) : '-'}">
+                            <div class="font-semibold text-lg sm:text-xl xl:text-2xl text-white tracking-normal truncate leading-snug py-0.5 mt-0.5" title="${leader ? escapeHtml(leaderDisplayName) : '-'}">
                                 ${leader ? escapeHtml(leaderDisplayName) : 'ยังไม่มีข้อมูล'}
                             </div>
                         </div>
@@ -1824,7 +1841,7 @@
                     <div>
                         <div class="flex items-baseline justify-between gap-1.5 mb-1.5 px-0.5">
                             <span class="text-xs xl:text-base font-medium text-slate-600 truncate">
-                                สัดส่วน (<span class="tv-num text-slate-800">${ranked.length}</span> Station)
+                                สัดส่วน (<span class="tv-num text-slate-800">${ranked.length}</span> รายชื่อ)
                             </span>
                             <div class="flex items-baseline gap-1 shrink-0 whitespace-nowrap">
                                 <span class="text-xs xl:text-base font-medium text-slate-600">รวมทั้งหมด</span>
@@ -1838,7 +1855,7 @@
                     </div>` : ''}
                 </div>
 
-                <!-- กราฟแท่งเปรียบเทียบทุก Station (Auto-Fit ครบทุกตัวใน 1 หน้าจอ) -->
+                <!-- รายการจัดอันดับผู้แพ็คทุกคน (Auto-Fit ครบทุกตัวใน 1 หน้าจอ) -->
                 <div class="flex-1 min-h-0 flex flex-col justify-start gap-1.5 p-2.5 lg:p-3 overflow-y-auto md:overflow-hidden custom-scrollbar">
                     ${barsHtml}
                 </div>
