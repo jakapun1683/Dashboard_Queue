@@ -155,18 +155,22 @@
             </div>
 
             <!-- สถิติหน้า 2: ชากิโล 1 kg -->
-            <div id="header-stats-tea" class="hidden items-center gap-3 md:gap-5 lg:gap-6 pr-3 lg:pr-5 border-r-2 border-slate-200">
-                <div class="flex flex-col items-center px-1.5">
-                    <span class="text-emerald-700 text-sm md:text-base lg:text-lg font-medium whitespace-nowrap leading-tight">วันนี้</span>
-                    <div class="tv-num text-3xl md:text-4xl lg:text-5xl text-emerald-700 leading-none mt-1" id="tea-hdr-day">0</div>
+            <div id="header-stats-tea" class="hidden items-center gap-2.5 md:gap-4 lg:gap-5 pr-3 lg:pr-5 border-r-2 border-slate-200">
+                <div class="flex flex-col items-center px-1">
+                    <span class="text-emerald-700 text-xs md:text-sm lg:text-base font-medium whitespace-nowrap leading-tight">วันนี้</span>
+                    <div class="tv-num text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-emerald-700 leading-none mt-1" id="tea-hdr-day">0</div>
                 </div>
-                <div class="flex flex-col items-center px-1.5">
-                    <span class="text-sky-700 text-sm md:text-base lg:text-lg font-medium whitespace-nowrap leading-tight">สัปดาห์นี้</span>
-                    <div class="tv-num text-3xl md:text-4xl lg:text-5xl text-sky-700 leading-none mt-1" id="tea-hdr-week">0</div>
+                <div class="flex flex-col items-center px-1">
+                    <span class="text-sky-700 text-xs md:text-sm lg:text-base font-medium whitespace-nowrap leading-tight">สัปดาห์นี้</span>
+                    <div class="tv-num text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-sky-700 leading-none mt-1" id="tea-hdr-week">0</div>
                 </div>
-                <div class="flex flex-col items-center px-1.5">
-                    <span class="text-violet-700 text-sm md:text-base lg:text-lg font-medium whitespace-nowrap leading-tight">เดือนนี้</span>
-                    <div class="tv-num text-3xl md:text-4xl lg:text-5xl text-violet-700 leading-none mt-1" id="tea-hdr-month">0</div>
+                <div class="flex flex-col items-center px-1">
+                    <span class="text-violet-700 text-xs md:text-sm lg:text-base font-medium whitespace-nowrap leading-tight">เดือนนี้</span>
+                    <div class="tv-num text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-violet-700 leading-none mt-1" id="tea-hdr-month">0</div>
+                </div>
+                <div class="flex flex-col items-center bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-0.5 shadow-sm">
+                    <span class="text-amber-700 text-xs md:text-sm lg:text-base font-semibold whitespace-nowrap leading-tight">รอบ 26–25</span>
+                    <div class="tv-num text-2xl md:text-3xl lg:text-4xl xl:text-5xl text-amber-600 leading-none mt-1" id="tea-hdr-cycle">0</div>
                 </div>
             </div>
 
@@ -204,7 +208,7 @@
     <!-- =================================================================== -->
     <!-- PAGE 2: Dashboard กราฟสรุปอันดับ Station แพ็คชากิโล (1 kg) สำหรับ TV -->
     <!-- =================================================================== -->
-    <main id="page-tea" class="hidden flex-1 flex-col min-h-0 bg-slate-100 overflow-y-auto md:overflow-hidden p-2 lg:p-3 fade-in">
+    <main id="page-tea" class="hidden flex-1 flex-col min-h-0 bg-slate-100 overflow-y-auto lg:overflow-hidden p-2 lg:p-3 fade-in">
         <!-- กล่องแจ้งเตือนกรณีดึงข้อมูลชากิโลไม่สำเร็จ -->
         <div id="tea-error-box" class="hidden bg-red-50 border border-red-200 rounded-2xl p-4 mb-2 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm">
             <div class="flex items-center gap-3 min-w-0">
@@ -230,13 +234,13 @@
         <div id="tea-loading-box" class="flex-1 flex flex-col items-center justify-center text-slate-500">
             <div class="w-14 h-14 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin mb-4"></div>
             <p class="text-xl lg:text-2xl font-semibold text-slate-700">กำลังโหลดสรุปยอดแพ็คชากิโล (1 kg)...</p>
-            <p class="text-sm lg:text-base text-slate-400 mt-1">กำลังจัดอันดับรายวัน รายสัปดาห์ และรายเดือน</p>
+            <p class="text-sm lg:text-base text-slate-400 mt-1">กำลังจัดอันดับรายวัน รายสัปดาห์ รายเดือน และรอบตัด 26–25</p>
         </div>
 
-        <!-- คอนเทนเนอร์ 3 คอลัมน์เต็มหน้าจอ (รายวัน / รายสัปดาห์ / รายเดือน) -->
+        <!-- คอนเทนเนอร์ 4 คอลัมน์เต็มหน้าจอ (รายวัน / รายสัปดาห์ / รายเดือน / ตัดรอบ 26-25) -->
         <div id="tea-content" class="hidden flex-1 flex flex-col min-h-0">
-            <div id="tea-charts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-2 lg:gap-3 flex-1 min-h-0">
-                <!-- การ์ดทั้ง 3 ช่วงเวลาจะถูกสร้างโดย JavaScript -->
+            <div id="tea-charts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5 flex-1 min-h-0">
+                <!-- การ์ดทั้ง 4 ช่วงเวลาจะถูกสร้างโดย JavaScript -->
             </div>
         </div>
     </main>
@@ -474,7 +478,8 @@
             selectedDate: '',
             selectedWeek: '',
             selectedMonth: '',
-            followCurrent: { day: true, week: true, month: true }
+            selectedCycle: '',
+            followCurrent: { day: true, week: true, month: true, cycle: true }
         };
 
         // ฟังก์ชันป้องกัน XSS เมื่อแสดงข้อความลง HTML
@@ -1133,7 +1138,40 @@
             return { isoYear: d.getUTCFullYear(), weekNo };
         }
 
-        // สร้างคีย์และป้ายชื่อสำหรับ วันปัจจุบัน / สัปดาห์ปัจจุบัน / เดือนปัจจุบัน จากเวลาเครื่องจริง
+        // คำนวณรอบตัดเดือนตั้งแต่วันที่ 26 ของเดือนก่อน ถึงวันที่ 25 ของเดือนถัดไป
+        // ตัวอย่าง: 26 ต.ค. - 25 พ.ย. 2026 => cycleKey: "2026-11", cycleLabel: "26 ต.ค.–25 พ.ย. 26"
+        function getCutoffCycleInfo(y, m, d) {
+            let startY, startM, endY, endM;
+            if (d >= 26) {
+                startY = y;
+                startM = m;
+                if (m === 12) {
+                    endM = 1;
+                    endY = y + 1;
+                } else {
+                    endM = m + 1;
+                    endY = y;
+                }
+            } else {
+                endY = y;
+                endM = m;
+                if (m === 1) {
+                    startM = 12;
+                    startY = y - 1;
+                } else {
+                    startM = m - 1;
+                    startY = y;
+                }
+            }
+
+            const cycleKey = `${endY}-${String(endM).padStart(2, '0')}`;
+            const startYearStr = startY !== endY ? ` ${String(startY).slice(-2)}` : '';
+            const endYearStr = String(endY).slice(-2);
+            const cycleLabel = `26 ${THAI_MONTHS_SHORT[startM - 1]}${startYearStr}–25 ${THAI_MONTHS_SHORT[endM - 1]} ${endYearStr}`;
+            return { cycleKey, cycleLabel };
+        }
+
+        // สร้างคีย์และป้ายชื่อสำหรับ วันปัจจุบัน / สัปดาห์ปัจจุบัน / เดือนปัจจุบัน / รอบตัด 26-25 ปัจจุบัน จากเวลาเครื่องจริง
         function getCurrentPeriodInfo() {
             const now = new Date();
             const y = now.getFullYear();
@@ -1145,6 +1183,7 @@
             const dayName = THAI_DAYS_FULL[now.getDay()];
             const { isoYear, weekNo } = getIsoWeekNumber(now);
             const wCode = `W${String(weekNo).padStart(2, '0')}`;
+            const { cycleKey, cycleLabel } = getCutoffCycleInfo(y, m, d);
             const todayStartTs = new Date(y, m - 1, d).getTime();
 
             return {
@@ -1154,6 +1193,8 @@
                 weekLabel: `${wCode} (${isoYear})`,
                 monthKey: `${y}-${mm}`,
                 monthLabel: `${THAI_MONTHS_SHORT[m - 1]} ${y}`,
+                cycleKey,
+                cycleLabel,
                 timestamp: todayStartTs
             };
         }
@@ -1167,6 +1208,8 @@
                     dateLabel: 'ไม่ระบุวันที่',
                     monthKey: 'ไม่ระบุเดือน',
                     monthLabel: 'ไม่ระบุเดือน',
+                    cycleKey: 'ไม่ระบุรอบ',
+                    cycleLabel: 'ไม่ระบุรอบ',
                     timestamp: 0,
                     year: 0
                 };
@@ -1223,11 +1266,14 @@
                 const mm = String(m).padStart(2, '0');
                 const dd = String(d).padStart(2, '0');
                 const shortYear = String(y).slice(-2);
+                const { cycleKey, cycleLabel } = getCutoffCycleInfo(y, m, d);
                 return {
                     dateKey: `${y}-${mm}-${dd}`,
                     dateLabel: `${d} ${THAI_MONTHS_SHORT[m - 1]} ${shortYear}`,
                     monthKey: `${y}-${mm}`,
                     monthLabel: `${THAI_MONTHS_SHORT[m - 1]} ${y}`,
+                    cycleKey,
+                    cycleLabel,
                     timestamp: new Date(y, m - 1, d).getTime(),
                     year: y
                 };
@@ -1238,6 +1284,8 @@
                 dateLabel: raw,
                 monthKey: 'อื่นๆ',
                 monthLabel: 'อื่นๆ',
+                cycleKey: 'อื่นๆ',
+                cycleLabel: 'อื่นๆ',
                 timestamp: 0,
                 year: 0
             };
@@ -1357,6 +1405,8 @@
                     dateShort: dateInfo.dateLabel,
                     monthKey: dateInfo.monthKey,
                     monthLabel: dateInfo.monthLabel,
+                    cycleKey: dateInfo.cycleKey,
+                    cycleLabel: dateInfo.cycleLabel,
                     weekKey: weekInfo.weekKey,
                     weekLabel: weekInfo.weekLabel,
                     timestamp: dateInfo.timestamp,
@@ -1573,7 +1623,9 @@
                 ['PackingStation03', '', '10/11/2026', '46', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '35', 'จันทร์จิรา บิลยะลา'],
                 ['PackingStation02', '', '09/11/2026', '46', 'วันจันทร์', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '28', '#N/A'],
                 ['PackingStation01', '', '05/11/2026', '45', 'วันพฤหัสบดี', '10:00:00', '10:00', 'Matchazuki M4 1 Kg', '', '40', 'สุภาวดี ใจดี'],
-                ['PackingStation04', '', '03/11/2026', '45', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '19', 'ธนพล สุขสันต์']
+                ['PackingStation04', '', '03/11/2026', '45', 'วันอังคาร', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '19', 'ธนพล สุขสันต์'],
+                ['PackingStation03', '', '28/10/2026', '44', 'วันพุธ', '10:00:00', '10:00', 'Matchazuki M3 1 Kg', '', '27', 'จันทร์จิรา บิลยะลา'],
+                ['PackingStation01', '', '26/10/2026', '44', 'วันจันทร์', '10:00:00', '10:00', 'Matchazuki M4 1 Kg', '', '21', 'สุภาวดี ใจดี']
             ];
             teaState.records = parseTeaRows(demoRows);
             teaState.isDemo = true;
@@ -1608,26 +1660,33 @@
             return { ranked, total };
         }
 
-        // สร้างรายการตัวเลือก (วัน / สัปดาห์ / เดือน) เรียงจากล่าสุดไปเก่าสุด
+        // สร้างรายการตัวเลือก (วัน / สัปดาห์ / เดือน / รอบตัด 26–25) เรียงจากล่าสุดไปเก่าสุด
         function getSortedPeriods(records, keyField, labelField) {
             const map = new Map();
             for (const r of records) {
                 const key = r[keyField];
                 const cur = map.get(key);
                 if (!cur) {
-                    map.set(key, { key, label: r[labelField], latestTs: r.timestamp, total: r.qty });
+                    map.set(key, {
+                        key,
+                        label: r[labelField],
+                        latestTs: r.timestamp || 0,
+                        total: r.qty
+                    });
                 } else {
                     cur.total += r.qty;
-                    if (r.timestamp > cur.latestTs) {
+                    if ((r.timestamp || 0) > cur.latestTs) {
                         cur.latestTs = r.timestamp;
-                        cur.label = r[labelField];
                     }
                 }
             }
-            return Array.from(map.values()).sort((a, b) => b.latestTs - a.latestTs || b.key.localeCompare(a.key));
+            return Array.from(map.values()).sort((a, b) => {
+                if (b.latestTs !== a.latestTs) return b.latestTs - a.latestTs;
+                return String(b.key).localeCompare(String(a.key));
+            });
         }
 
-        // เมื่อผู้ใช้เปลี่ยนวัน / สัปดาห์ / เดือน บน dropdown ของแต่ละกราฟ
+        // เมื่อผู้ใช้เปลี่ยนวัน / สัปดาห์ / เดือน / รอบตัด 26-25 บน dropdown ของแต่ละกราฟ
         function onTeaPeriodChange(periodType, value) {
             const current = getCurrentPeriodInfo();
             if (periodType === 'day') {
@@ -1639,6 +1698,9 @@
             } else if (periodType === 'month') {
                 teaState.selectedMonth = value;
                 teaState.followCurrent.month = (value === current.monthKey);
+            } else if (periodType === 'cycle') {
+                teaState.selectedCycle = value;
+                teaState.followCurrent.cycle = (value === current.cycleKey);
             }
             // รีเซ็ตตัวนับถอยหลังเมื่อผู้ใช้กำลังเลือกดูข้อมูลย้อนหลัง
             if (autoRotateTimer) {
@@ -1648,11 +1710,12 @@
             renderTeaDashboard();
         }
 
-        // กดเพื่อกลับไปติดตามวัน / สัปดาห์ / เดือนปัจจุบันอัตโนมัติ
+        // กดเพื่อกลับไปติดตามวัน / สัปดาห์ / เดือน / รอบตัด 26-25 ปัจจุบันอัตโนมัติ
         function resetTeaPeriodToCurrent(periodType) {
             if (periodType === 'day') teaState.followCurrent.day = true;
             else if (periodType === 'week') teaState.followCurrent.week = true;
             else if (periodType === 'month') teaState.followCurrent.month = true;
+            else if (periodType === 'cycle') teaState.followCurrent.cycle = true;
             renderTeaDashboard();
         }
 
@@ -1735,9 +1798,9 @@
 
             // รายการอันดับผู้แพ็คทุกคน (แบบการ์ดตัวเลขสะอาดตา รองรับชื่อภาษาไทยเต็มรูปแบบ อ่านชัดระยะ 5-8 เมตร)
             const barsHtml = ranked.length === 0
-                ? `<div class="flex-1 flex flex-col items-center justify-center text-slate-400 py-6">
-                        <i data-lucide="inbox" class="w-10 h-10 mb-1.5 opacity-50"></i>
-                        <p class="font-medium text-base">ยังไม่มีข้อมูลการแพ็คในช่วงนี้</p>
+                ? `<div class="flex-1 flex flex-col items-center justify-center text-slate-400 py-4">
+                       <i data-lucide="inbox" class="w-10 h-10 mb-2 opacity-60"></i>
+                       <span class="text-sm lg:text-base font-medium">ยังไม่มีข้อมูลการแพ็คในช่วงนี้</span>
                    </div>`
                 : ranked.map((item, idx) => {
                     const isTop = idx === 0;
@@ -1749,120 +1812,118 @@
                             ? 'bg-slate-300 text-slate-800'
                             : idx === 2
                                 ? 'bg-orange-200 text-orange-900'
-                                : 'bg-slate-200/80 text-slate-700';
+                                : 'bg-slate-100 text-slate-600 border border-slate-200';
 
                     if (isUltraCompact) {
-                        // โหมดกะทัดรัดพิเศษ 1 บรรทัด (กรณีมี 9 รายชื่อขึ้นไป ให้เห็นครบในหน้าเดียว)
+                        // โหมดกระชับพิเศษ (9 รายชื่อขึ้นไป): แสดงครบทุกแถวในหน้าเดียวบน TV
                         return `
-                            <div class="flex-1 min-h-[28px] max-h-[42px] flex items-center justify-between gap-2 px-2.5 rounded-lg ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <span class="tv-num w-6 h-6 rounded-md text-xs flex items-center justify-center shrink-0 ${rankBadge}">${idx + 1}</span>
-                                    <span class="w-2.5 h-2.5 rounded-full shrink-0 ${stColor.bg}"></span>
-                                    <span class="font-medium tracking-normal truncate leading-snug py-0.5 text-sm lg:text-base ${isTop ? 'text-slate-900 font-semibold' : 'text-slate-800'}" title="${escapeHtml(displayName)}">
-                                        ${escapeHtml(displayName)}
-                                    </span>
-                                </div>
-                                <div class="flex items-baseline gap-2 shrink-0">
-                                    <span class="tv-num text-lg lg:text-xl leading-none ${isTop ? theme.textAccent : 'text-slate-900'}">${formatNum(item.qty)}</span>
-                                    <span class="tv-num-light text-xs lg:text-sm text-slate-600 w-10 text-right">${item.pct}%</span>
-                                </div>
-                            </div>`;
+                        <div class="flex-1 min-h-0 flex items-center justify-between gap-1.5 px-2 py-0.5 rounded-lg ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="tv-num w-5 h-5 rounded text-[11px] flex items-center justify-center shrink-0 ${rankBadge}">${idx + 1}</span>
+                                <span class="w-2 h-2 rounded-full shrink-0 ${stColor.bg}"></span>
+                                <span class="font-medium text-xs xl:text-sm text-slate-800 truncate leading-snug" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
+                            </div>
+                            <div class="flex items-baseline gap-1 shrink-0">
+                                <span class="tv-num text-base xl:text-lg leading-none ${isTop ? theme.textAccent : 'text-slate-900'}">${formatNum(item.qty)}</span>
+                                <span class="tv-num-light text-[11px] xl:text-xs text-slate-600 w-7 text-right">${item.pct}%</span>
+                            </div>
+                        </div>`;
                     }
 
-                    // โหมดมาตรฐาน TV (อ่านชัดจากระยะ 5-8 เมตร: ชื่อไทยไม่โดนตัดสระบน-ล่าง ตัวเลขโปร่งชัดเจน)
+                    // โหมดมาตรฐาน TV (อ่านชัดจากระยะ 5-8 เมตร: ชื่อไทยไม่โดนตัดสระบน-ล่าง ตัวเลขโปร่งชัดเจน รองรับ 4 คอลัมน์)
                     return `
-                        <div class="flex-1 min-h-0 max-h-[54px] flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-xl transition-colors ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="tv-num w-6 h-6 xl:w-7 xl:h-7 rounded-lg text-xs xl:text-sm flex items-center justify-center shrink-0 ${rankBadge}">
+                        <div class="flex-1 min-h-0 max-h-[54px] flex items-center justify-between gap-1.5 px-2 py-1 rounded-xl transition-colors ${isTop ? theme.topRowBg + ' border ' + theme.topRowBorder : 'bg-slate-50/80 border border-slate-100'}">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="tv-num w-6 h-6 rounded-lg text-xs flex items-center justify-center shrink-0 ${rankBadge}">
                                     ${idx + 1}
                                 </span>
                                 <span class="w-2.5 h-2.5 rounded-full shrink-0 ${stColor.bg}"></span>
-                                <span class="font-medium tracking-normal truncate leading-snug py-0.5 ${isTop ? 'text-slate-900 font-semibold text-base xl:text-xl' : 'text-slate-800 text-sm xl:text-lg'}" title="${escapeHtml(displayName)}">
+                                <span class="font-medium tracking-normal truncate leading-snug py-0.5 ${isTop ? 'text-slate-900 font-semibold text-sm xl:text-lg' : 'text-slate-800 text-sm xl:text-base'}" title="${escapeHtml(displayName)}">
                                     ${escapeHtml(displayName)}
                                 </span>
                             </div>
-                            <div class="flex items-baseline gap-2 shrink-0">
-                                <span class="tv-num leading-none ${isTop ? theme.textAccent + ' text-2xl xl:text-3xl' : 'text-slate-900 text-xl xl:text-3xl'}">
+                            <div class="flex items-baseline gap-1.5 shrink-0">
+                                <span class="tv-num leading-none ${isTop ? theme.textAccent + ' text-xl xl:text-3xl' : 'text-slate-900 text-lg xl:text-2xl'}">
                                     ${formatNum(item.qty)}
                                 </span>
-                                <span class="tv-num-light text-xs xl:text-base text-slate-600 w-9 xl:w-11 text-right">${item.pct}%</span>
+                                <span class="tv-num-light text-xs xl:text-sm text-slate-600 w-8 xl:w-10 text-right">${item.pct}%</span>
                             </div>
                         </div>`;
                 }).join('');
 
             return `
-            <section class="bg-white rounded-2xl border border-slate-200 shadow-md flex flex-col min-h-[340px] md:min-h-0 md:h-full overflow-hidden">
-                <!-- ส่วนหัวการ์ด: ขยายหัวข้อ รายวัน / รายสัปดาห์ / รายเดือน และช่วงเวลาให้ใหญ่ชัดอ่านง่ายบน TV -->
-                <div class="${theme.headerBg} border-b-2 ${theme.headerBorder} px-3 py-2 flex flex-col gap-0.5 shrink-0">
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-md flex flex-col min-h-[340px] lg:min-h-0 lg:h-full overflow-hidden">
+                <!-- ส่วนหัวการ์ด: ขยายหัวข้อ รายวัน / รายสัปดาห์ / รายเดือน / ตัดรอบ 26–25 ให้ชัดอ่านง่ายบน TV -->
+                <div class="${theme.headerBg} border-b-2 ${theme.headerBorder} px-2.5 xl:px-3 py-2 flex flex-col gap-0.5 shrink-0">
                     <div class="flex items-center justify-between gap-1.5">
-                        <div class="flex items-center gap-2 min-w-0">
+                        <div class="flex items-center gap-1.5 min-w-0">
                             <div class="${theme.iconBg} ${theme.iconText} p-1.5 rounded-xl shrink-0 shadow-sm">
-                                <i data-lucide="${icon}" class="w-5 h-5 xl:w-6 xl:h-6"></i>
+                                <i data-lucide="${icon}" class="w-4 h-4 xl:w-5 xl:h-5"></i>
                             </div>
-                            <h2 class="font-semibold ${theme.titleText} text-xl xl:text-3xl tracking-wide leading-none truncate">${title}</h2>
+                            <h2 class="font-semibold ${theme.titleText} text-lg xl:text-2xl tracking-wide leading-none truncate">${title}</h2>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
                             ${!isFollowingCurrent ? `
                             <button onclick="resetTeaPeriodToCurrent('${periodType}')"
                                 title="กลับเป็นช่วงเวลาปัจจุบันอัตโนมัติ"
-                                class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium px-2 py-1 rounded-lg shadow-sm cursor-pointer whitespace-nowrap">
+                                class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium px-1.5 py-1 rounded-lg shadow-sm cursor-pointer whitespace-nowrap">
                                 ปัจจุบัน
                             </button>` : ''}
                             <select onchange="onTeaPeriodChange('${periodType}', this.value)"
                                 aria-label="เลือก${title}"
-                                class="bg-white/90 hover:bg-white border border-slate-300 text-slate-700 font-medium text-xs rounded-lg px-1.5 py-1 shadow-sm focus:outline-none focus:ring-2 ${theme.ring} max-w-[96px] xl:max-w-[120px] shrink-0 cursor-pointer">
+                                class="bg-white/90 hover:bg-white border border-slate-300 text-slate-700 font-medium text-xs rounded-lg px-1.5 py-1 shadow-sm focus:outline-none focus:ring-2 ${theme.ring} max-w-[84px] xl:max-w-[108px] shrink-0 cursor-pointer">
                                 ${optionsHtml}
                             </select>
                         </div>
                     </div>
-                    <p class="tv-num-light text-base xl:text-xl font-medium text-slate-800 tracking-wide leading-tight truncate pt-0.5" title="${escapeHtml(subtitle)}">
+                    <p class="tv-num-light text-sm xl:text-lg font-medium text-slate-800 tracking-wide leading-tight truncate pt-0.5" title="${escapeHtml(subtitle)}">
                         ${subtitle}
                     </p>
                 </div>
 
                 <!-- การ์ดตัวเลขไฮไลต์อันดับ 1 + ยอดรวมทั้งหมดและกราฟสัดส่วน 100% -->
-                <div class="px-3 pt-2.5 pb-2 border-b border-slate-100 shrink-0 space-y-2.5">
+                <div class="px-2.5 xl:px-3 pt-2.5 pb-2 border-b border-slate-100 shrink-0 space-y-2">
                     <!-- กล่องสีแสดงเฉพาะแชมป์อันดับ 1 เพื่อไม่ให้สับสนกับยอดรวมทั้งหมด -->
-                    <div class="${theme.heroBg} rounded-xl px-3 py-2.5 shadow-sm flex items-center justify-between gap-2">
+                    <div class="${theme.heroBg} rounded-xl px-2.5 xl:px-3 py-2 shadow-sm flex items-center justify-between gap-2">
                         <div class="flex-1 min-w-0">
                             <div class="text-xs xl:text-sm font-medium ${theme.heroSub} leading-none">🏆 แพ็คเยอะสุด</div>
-                            <div class="font-semibold text-lg sm:text-xl xl:text-2xl text-white tracking-normal truncate leading-snug py-0.5 mt-0.5" title="${leader ? escapeHtml(leaderDisplayName) : '-'}">
+                            <div class="font-semibold text-base sm:text-lg xl:text-2xl text-white tracking-normal truncate leading-snug py-0.5 mt-0.5" title="${leader ? escapeHtml(leaderDisplayName) : '-'}">
                                 ${leader ? escapeHtml(leaderDisplayName) : 'ยังไม่มีข้อมูล'}
                             </div>
                         </div>
-                        <div class="bg-white/20 backdrop-blur-sm rounded-xl px-2.5 py-1.5 text-center shrink-0 border border-white/30 min-w-[82px] xl:min-w-[96px]">
-                            <div class="tv-num text-2xl xl:text-4xl text-white leading-none">${leader ? formatNum(leader.qty) : 0}</div>
-                            <div class="tv-num-light text-xs xl:text-sm text-white/95 mt-0.5">ถุง (${leader ? leader.pct : 0}%)</div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl px-2 py-1.5 text-center shrink-0 border border-white/30 min-w-[72px] xl:min-w-[88px]">
+                            <div class="tv-num text-2xl xl:text-3xl text-white leading-none">${leader ? formatNum(leader.qty) : 0}</div>
+                            <div class="tv-num-light text-[11px] xl:text-xs text-white/95 mt-0.5 whitespace-nowrap">ถุง (${leader ? leader.pct : 0}%)</div>
                         </div>
                     </div>
 
                     <!-- ยอดรวมทั้งหมด (ขยายใหญ่ชัด) + กราฟสัดส่วน 100% -->
                     ${ranked.length > 0 ? `
                     <div>
-                        <div class="flex items-baseline justify-between gap-1.5 mb-1.5 px-0.5">
-                            <span class="text-xs xl:text-base font-medium text-slate-600 truncate">
-                                สัดส่วน (<span class="tv-num text-slate-800">${ranked.length}</span> รายชื่อ)
+                        <div class="flex items-baseline justify-between gap-1 mb-1 px-0.5">
+                            <span class="text-xs xl:text-sm font-medium text-slate-600 truncate">
+                                <span class="tv-num text-slate-800">${ranked.length}</span> รายชื่อ
                             </span>
                             <div class="flex items-baseline gap-1 shrink-0 whitespace-nowrap">
-                                <span class="text-xs xl:text-base font-medium text-slate-600">รวมทั้งหมด</span>
-                                <span class="tv-num text-xl xl:text-3xl text-slate-900 leading-none">${formatNum(total)}</span>
-                                <span class="text-xs xl:text-base font-medium text-slate-600">ถุง</span>
+                                <span class="text-xs xl:text-sm font-medium text-slate-600">รวม</span>
+                                <span class="tv-num text-lg xl:text-2xl text-slate-900 leading-none">${formatNum(total)}</span>
+                                <span class="text-xs xl:text-sm font-medium text-slate-600">ถุง</span>
                             </div>
                         </div>
-                        <div class="w-full h-5 lg:h-6 bg-slate-100 rounded-full overflow-hidden flex gap-0.5 p-0.5 shadow-inner">
+                        <div class="w-full h-5 bg-slate-100 rounded-full overflow-hidden flex gap-0.5 p-0.5 shadow-inner">
                             ${stackedSegmentsHtml}
                         </div>
                     </div>` : ''}
                 </div>
 
                 <!-- รายการจัดอันดับผู้แพ็คทุกคน (Auto-Fit ครบทุกตัวใน 1 หน้าจอ) -->
-                <div class="flex-1 min-h-0 flex flex-col justify-start gap-1.5 p-2.5 lg:p-3 overflow-y-auto md:overflow-hidden custom-scrollbar">
+                <div class="flex-1 min-h-0 flex flex-col justify-start gap-1.5 p-2 xl:p-2.5 overflow-y-auto lg:overflow-hidden custom-scrollbar">
                     ${barsHtml}
                 </div>
             </section>`;
         }
 
-        // เรนเดอร์หน้าชากิโล (1 kg) ทั้ง 3 คอลัมน์ (รายวัน / รายสัปดาห์ / รายเดือน)
+        // เรนเดอร์หน้าชากิโล (1 kg) ทั้ง 4 คอลัมน์ (รายวัน / รายสัปดาห์ / รายเดือน / ตัดรอบ 26–25)
         function renderTeaDashboard() {
             const grid = document.getElementById('tea-charts-grid');
             if (!grid) return;
@@ -1873,8 +1934,9 @@
             const days = getSortedPeriods(records, 'dateKey', 'dateLabel');
             const weeks = getSortedPeriods(records, 'weekKey', 'weekLabel');
             const months = getSortedPeriods(records, 'monthKey', 'monthLabel');
+            const cycles = getSortedPeriods(records, 'cycleKey', 'cycleLabel');
 
-            // แทรก วันปัจจุบัน / สัปดาห์ปัจจุบัน / เดือนปัจจุบัน ไว้บนสุดเสมอ แม้ยังไม่มีออเดอร์เข้ามาในวันนี้
+            // แทรก วันปัจจุบัน / สัปดาห์ปัจจุบัน / เดือนปัจจุบัน / รอบตัด 26–25 ปัจจุบัน ไว้บนสุดเสมอ แม้ยังไม่มีออเดอร์เข้ามาในวันนี้
             const ensureCurrentOption = (list, key, label, ts) => {
                 const existing = list.find(item => item.key === key);
                 if (existing) {
@@ -1887,8 +1949,9 @@
             ensureCurrentOption(days, current.dateKey, current.dateLabel, current.timestamp);
             ensureCurrentOption(weeks, current.weekKey, current.weekLabel, current.timestamp);
             ensureCurrentOption(months, current.monthKey, current.monthLabel, current.timestamp);
+            ensureCurrentOption(cycles, current.cycleKey, current.cycleLabel, current.timestamp);
 
-            // ถ้าเปิดโหมดติดตามปัจจุบัน (ค่าเริ่มต้น) ให้ล็อกเป็น วัน/สัปดาห์/เดือนปัจจุบัน เสมอเมื่อมีข้อมูลใหม่หรือเปลี่ยนวัน
+            // ถ้าเปิดโหมดติดตามปัจจุบัน (ค่าเริ่มต้น) ให้ล็อกเป็นช่วงเวลาปัจจุบันเสมอเมื่อมีข้อมูลใหม่หรือเปลี่ยนวัน
             if (teaState.followCurrent.day || !teaState.selectedDate || !days.some(d => d.key === teaState.selectedDate)) {
                 teaState.selectedDate = current.dateKey;
                 teaState.followCurrent.day = true;
@@ -1901,28 +1964,37 @@
                 teaState.selectedMonth = current.monthKey;
                 teaState.followCurrent.month = true;
             }
+            if (teaState.followCurrent.cycle || !teaState.selectedCycle || !cycles.some(c => c.key === teaState.selectedCycle)) {
+                teaState.selectedCycle = current.cycleKey;
+                teaState.followCurrent.cycle = true;
+            }
 
             const daySummary = aggregateByStation(records.filter(r => r.dateKey === teaState.selectedDate));
             const weekSummary = aggregateByStation(records.filter(r => r.weekKey === teaState.selectedWeek));
             const monthSummary = aggregateByStation(records.filter(r => r.monthKey === teaState.selectedMonth));
+            const cycleSummary = aggregateByStation(records.filter(r => r.cycleKey === teaState.selectedCycle));
 
             // อัพเดทตัวเลขสรุปบน Header และ Badge ปุ่มแท็บ
             const hdrDay = document.getElementById('tea-hdr-day');
             const hdrWeek = document.getElementById('tea-hdr-week');
             const hdrMonth = document.getElementById('tea-hdr-month');
+            const hdrCycle = document.getElementById('tea-hdr-cycle');
             const navBadgeTea = document.getElementById('nav-badge-tea');
             if (hdrDay) hdrDay.textContent = formatNum(daySummary.total);
             if (hdrWeek) hdrWeek.textContent = formatNum(weekSummary.total);
             if (hdrMonth) hdrMonth.textContent = formatNum(monthSummary.total);
+            if (hdrCycle) hdrCycle.textContent = formatNum(cycleSummary.total);
             if (navBadgeTea) navBadgeTea.textContent = formatNum(daySummary.total);
 
             const dayOpt = days.find(d => d.key === teaState.selectedDate);
             const weekOpt = weeks.find(w => w.key === teaState.selectedWeek);
             const monthOpt = months.find(m => m.key === teaState.selectedMonth);
+            const cycleOpt = cycles.find(c => c.key === teaState.selectedCycle);
 
             const isTodaySelected = teaState.selectedDate === current.dateKey;
             const isThisWeekSelected = teaState.selectedWeek === current.weekKey;
             const isThisMonthSelected = teaState.selectedMonth === current.monthKey;
+            const isThisCycleSelected = teaState.selectedCycle === current.cycleKey;
 
             grid.innerHTML = [
                 buildRankCardHtml({
@@ -1993,6 +2065,29 @@
                     selectedKey: teaState.selectedMonth,
                     isFollowingCurrent: teaState.followCurrent.month,
                     summary: monthSummary
+                }),
+                buildRankCardHtml({
+                    periodType: 'cycle',
+                    title: 'ตัดรอบ 26–25',
+                    subtitle: cycleOpt ? (isThisCycleSelected ? `รอบนี้ • ${cycleOpt.label}` : `รอบ ${cycleOpt.label}`) : 'ไม่มีข้อมูล',
+                    icon: 'calendar-check',
+                    theme: {
+                        headerBg: 'bg-amber-50/90',
+                        headerBorder: 'border-amber-300',
+                        iconBg: 'bg-amber-100',
+                        iconText: 'text-amber-700',
+                        titleText: 'text-amber-900',
+                        ring: 'focus:ring-amber-400',
+                        heroBg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+                        heroSub: 'text-amber-100',
+                        textAccent: 'text-amber-700',
+                        topRowBg: 'bg-amber-50/80',
+                        topRowBorder: 'border-amber-200'
+                    },
+                    options: cycles,
+                    selectedKey: teaState.selectedCycle,
+                    isFollowingCurrent: teaState.followCurrent.cycle,
+                    summary: cycleSummary
                 })
             ].join('');
 
