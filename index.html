@@ -266,11 +266,19 @@
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <!-- ปุ่มเปิด/ปิดโหมดสลับหน้าอัตโนมัติสำหรับจอทีวี -->
-            <button id="auto-rotate-btn" onclick="toggleAutoRotate()" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all active:scale-95 cursor-pointer" title="สลับหน้า Shopee และ ชากิโล 1 kg อัตโนมัติทุก 20 วินาที">
-                <i data-lucide="monitor-play" class="w-4 h-4 text-slate-500" id="auto-rotate-icon"></i>
-                <span id="auto-rotate-label">สลับหน้าอัตโนมัติ: ปิด</span>
-            </button>
+            <!-- ควบคุมโหมดสลับหน้าอัตโนมัติสำหรับจอทีวี (เปิดอัตโนมัติเมื่อโหลดหน้า) -->
+            <div class="flex items-center gap-1">
+                <button id="auto-rotate-btn" onclick="toggleAutoRotate()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-md active:scale-95 cursor-pointer" title="คลิกเพื่อหยุด/เริ่มการสลับหน้าอัตโนมัติ">
+                    <i data-lucide="monitor-play" class="w-4 h-4 text-white animate-pulse" id="auto-rotate-icon"></i>
+                    <span id="auto-rotate-label">สลับหน้าอัตโนมัติ: เปิด (20 วิ)</span>
+                </button>
+                <select id="auto-rotate-interval" onchange="changeAutoRotateInterval(this.value)" aria-label="ตั้งเวลาสลับหน้าอัตโนมัติ" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-1 px-2 rounded-lg font-bold text-xs lg:text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    <option value="15">15 วิ</option>
+                    <option value="20" selected>20 วิ</option>
+                    <option value="30">30 วิ</option>
+                    <option value="60">60 วิ</option>
+                </select>
+            </div>
 
             <!-- ปุ่มดึงข้อมูลล่าสุดทั้ง 2 หน้า -->
             <button id="refresh-btn" onclick="refreshAllData()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white py-1 px-4 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer">
@@ -323,6 +331,8 @@
         let shopeeStatusSummary = 'กำลังเชื่อมต่อข้อมูล Shopee...';
         let teaStatusSummary = 'กำลังเชื่อมต่อข้อมูลชากิโล (1 kg)...';
         let autoRotateTimer = null;
+        let autoRotateSeconds = 20;
+        let autoRotateRemaining = 20;
 
         // สถานะข้อมูลหน้าชากิโล (1 kg)
         const teaState = {
@@ -447,9 +457,15 @@
         }
 
         // สลับหน้า Dashboard ระหว่าง 'shopee' และ 'tea'
-        function switchPage(page) {
+        function switchPage(page, isAuto = false) {
             if (page !== 'shopee' && page !== 'tea') return;
             activePage = page;
+
+            // หากผู้ใช้กดสลับหน้าเอง ให้รีเซ็ตเวลานับถอยหลังใหม่ จะได้มีเวลาดูหน้าเต็มรอบ
+            if (!isAuto && autoRotateTimer) {
+                autoRotateRemaining = autoRotateSeconds;
+                updateAutoRotateUi();
+            }
 
             const isShopee = page === 'shopee';
             const header = document.getElementById('main-header');
@@ -533,27 +549,70 @@
             safeIcons();
         }
 
-        // เปิด/ปิด โหมดสลับหน้าอัตโนมัติทุก 20 วินาที (เหมาะสำหรับจอทีวี)
-        function toggleAutoRotate() {
+        // อัพเดทข้อความและสถานะปุ่มสลับหน้าอัตโนมัติพร้อมตัวนับถอยหลัง
+        function updateAutoRotateUi() {
             const btn = document.getElementById('auto-rotate-btn');
             const label = document.getElementById('auto-rotate-label');
             const icon = document.getElementById('auto-rotate-icon');
+            if (!btn || !label) return;
 
+            if (autoRotateTimer) {
+                btn.className = 'flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-md active:scale-95 cursor-pointer';
+                if (icon) icon.className = 'w-4 h-4 text-white animate-pulse';
+                label.textContent = `สลับหน้าอัตโนมัติ: เปิด (${autoRotateRemaining} วิ)`;
+            } else {
+                btn.className = 'flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all active:scale-95 cursor-pointer';
+                if (icon) icon.className = 'w-4 h-4 text-slate-500';
+                label.textContent = 'สลับหน้าอัตโนมัติ: ปิด';
+            }
+        }
+
+        // เริ่มโหมดสลับหน้าอัตโนมัติพร้อมนับถอยหลังทีละวินาที
+        function startAutoRotate() {
+            if (autoRotateTimer) clearInterval(autoRotateTimer);
+            autoRotateRemaining = autoRotateSeconds;
+            autoRotateTimer = setInterval(() => {
+                autoRotateRemaining--;
+                if (autoRotateRemaining <= 0) {
+                    autoRotateRemaining = autoRotateSeconds;
+                    switchPage(activePage === 'shopee' ? 'tea' : 'shopee', true);
+                }
+                updateAutoRotateUi();
+            }, 1000);
+            updateAutoRotateUi();
+            safeIcons();
+        }
+
+        // หยุดโหมดสลับหน้าอัตโนมัติ
+        function stopAutoRotate() {
             if (autoRotateTimer) {
                 clearInterval(autoRotateTimer);
                 autoRotateTimer = null;
-                if (btn) btn.className = 'flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all active:scale-95 cursor-pointer';
-                if (icon) icon.className = 'w-4 h-4 text-slate-500';
-                if (label) label.textContent = 'สลับหน้าอัตโนมัติ: ปิด';
-            } else {
-                autoRotateTimer = setInterval(() => {
-                    switchPage(activePage === 'shopee' ? 'tea' : 'shopee');
-                }, 20000);
-                if (btn) btn.className = 'flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 py-1 px-3 rounded-lg font-bold text-xs lg:text-sm transition-all shadow-md active:scale-95 cursor-pointer';
-                if (icon) icon.className = 'w-4 h-4 text-white animate-pulse';
-                if (label) label.textContent = 'สลับหน้าอัตโนมัติ: เปิด (20 วิ)';
             }
+            updateAutoRotateUi();
             safeIcons();
+        }
+
+        // เปิด/ปิด โหมดสลับหน้าอัตโนมัติ (คลิกเพื่อพักชั่วคราวหรือเปิดต่อ)
+        function toggleAutoRotate() {
+            if (autoRotateTimer) {
+                stopAutoRotate();
+            } else {
+                startAutoRotate();
+            }
+        }
+
+        // เปลี่ยนระยะเวลาในการสลับหน้าอัตโนมัติ (15 / 20 / 30 / 60 วินาที)
+        function changeAutoRotateInterval(seconds) {
+            const sec = parseInt(seconds, 10);
+            if (!Number.isFinite(sec) || sec < 5) return;
+            autoRotateSeconds = sec;
+            autoRotateRemaining = sec;
+            if (autoRotateTimer) {
+                startAutoRotate();
+            } else {
+                updateAutoRotateUi();
+            }
         }
 
         // ดึงข้อมูลใหม่ทั้ง 2 หน้าพร้อมกัน
@@ -1215,6 +1274,11 @@
             if (periodType === 'day') teaState.selectedDate = value;
             else if (periodType === 'week') teaState.selectedWeek = value;
             else if (periodType === 'month') teaState.selectedMonth = value;
+            // รีเซ็ตตัวนับถอยหลังเมื่อผู้ใช้กำลังเลือกดูข้อมูลย้อนหลัง
+            if (autoRotateTimer) {
+                autoRotateRemaining = autoRotateSeconds;
+                updateAutoRotateUi();
+            }
             renderTeaDashboard();
         }
 
@@ -1555,6 +1619,7 @@
             safeIcons();
             fetchShopeeData();
             fetchTeaData();
+            startAutoRotate();                    // เปิดสลับหน้าจออัตโนมัติทันทีตั้งแต่โหลดหน้า
             setInterval(fetchShopeeData, 13000); // รีเฟรช Shopee ทุก 13 วินาที
             setInterval(fetchTeaData, 60000);    // รีเฟรช ชากิโล 1 kg ทุก 60 วินาที
         };
